@@ -12,6 +12,9 @@ RUN  wget https://github.com.cnpmjs.org/protocolbuffers/protobuf/releases/downlo
     cd protobuf-${PROTOBUF_VERSION} &&\
     ./configure && make -j$(nproc) install
 
+FROM scratch AS build_image2
+COPY --from=build_image / /
+
 # compile tensorflow
 ARG TF_SRC=/tensorflow_src
 ARG TF_BINAR=/tensorflow_binaries
@@ -21,7 +24,7 @@ RUN mkdir -p ${TF_BINAR}/lib/&&\
     sed -i -e "s:\${TF_BINAR}:${TF_BINAR}:" tensorflow/core/platform/default/build_config/BUILD &&\
     mkdir -p ./bazel_output_base &&\
     export PYTHON_BIN_PATH=$(which python3) &&\
-    # export PYTHON_LIB_PATH=${SP_DIR} &&\
+    export PYTHON_LIB_PATH="$($PYTHON_BIN_PATH -c 'import site; print(site.getsitepackages()[0])')" &&\
     export USE_DEFAULT_PYTHON_LIB_PATH=1 &&\
     # Additional compute capabilities can be added if desired but these increase
     # the build time and size of the package.
@@ -87,15 +90,17 @@ RUN mkdir -p ${TF_BINAR}/lib/&&\
     rsync -avzh --include '*/' --include '*' --exclude '*.txt' bazel-work/external/eigen_archive/Eigen/ $PREFIX/include/Eigen/ &&\
     rsync -avzh --include '*/' --include '*' --exclude '*.txt' bazel-work/external/eigen_archive/unsupported/ $PREFIX/include/unsupported/ &&\
     rsync -avzh --include '*/' --include '*.h' --include '*.inc' --exclude '*' bazel-work/external/com_google_protobuf/src/google/ $PREFIX/include/google/ &&\
-    rsync -avzh --include '*/' --include '*.h' --include '*.inc' --exclude '*' bazel-work/external/com_google_absl/absl/ $PREFIX/include/absl/ &&\
+    rsync -avzh --include '*/' --include '*.h' --include '*.inc' --exclude '*' bazel-work/external/com_google_absl/absl/ $PREFIX/include/absl/ 
 
+FROM scratch AS build_image3
+COPY --from=built_image2 / /
 
-    ENV DPMD_DIR=/opt/deepmd-kit  
+ENV DPMD_DIR=/opt/deepmd-kit  
 RUN mkdir /tensorflow_binaries &&\
     cd /${TF_DIR} 
 
 
-FROM ubuntu:latest AS binaries
-COPY --from=build_image tensorflow_binaries.tar.gz /
+FROM scratch AS binaries
+COPY --from=build_image2 / /
 
 
