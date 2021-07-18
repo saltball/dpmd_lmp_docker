@@ -93,7 +93,7 @@ RUN mkdir -p ${TF_BINAR}/lib/&&\
     rsync -avzh --include '*/' --include '*.h' --include '*.inc' --exclude '*' bazel-tensorflow_src/external/com_google_absl/absl/ $TF_BINAR/include/absl/ 
 
 FROM scratch AS build_image3
-COPY --from=built_image2 $TF_BINAR /
+COPY --from=build_image2 $TF_BINAR /
 
 ENTRYPOINT ["tini", "--"]
 CMD [ "/bin/bash" ]
