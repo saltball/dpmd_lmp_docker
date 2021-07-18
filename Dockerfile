@@ -7,7 +7,7 @@ WORKDIR /
 # Get and compile protobuf
 ARG PROTOBUF_VERSION=3.17.3
 # NEEDED docker build --build-arg TOMCAT_VERSION
-RUN  wget https://github.com.cnpmjs.org/protocolbuffers/protobuf/releases/download/v${PROTOBUF_VERSION}/protobuf-cpp-${PROTOBUF_VERSION}.zip &&\
+RUN  wget https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOBUF_VERSION}/protobuf-cpp-${PROTOBUF_VERSION}.zip &&\
     unzip -q protobuf-cpp-${PROTOBUF_VERSION} &&\
     cd protobuf-${PROTOBUF_VERSION} &&\
     ./configure && make -j$(nproc) install
@@ -83,24 +83,27 @@ RUN mkdir -p ${TF_BINAR}/lib/&&\
     mkdir -p $PREFIX/include &&\
     mkdir -p $PREFIX/include/tensorflow &&\
     # copy headers
-    rsync -avzh --exclude '_virtual_includes/' --include '*/'  &&\--include '*.h' --include '*.inc' --exclude '*' bazel-bin/ $PREFIX/include/ &&\
+    rsync -avzh --exclude '_virtual_includes/' --include '*/' --include '*.h' --include '*.inc' --exclude '*' bazel-bin/ $PREFIX/include/ &&\
     rsync -avzh --include '*/' --include '*.h' --include '*.inc' --exclude '*' tensorflow/cc $PREFIX/include/tensorflow/ &&\
     rsync -avzh --include '*/' --include '*.h' --include '*.inc' --exclude '*' tensorflow/core $PREFIX/include/tensorflow/ &&\
     rsync -avzh --include '*/' --include '*' --exclude '*.cc' third_party/ $PREFIX/include/third_party/ &&\
-    rsync -avzh --include '*/' --include '*' --exclude '*.txt' bazel-work/external/eigen_archive/Eigen/ $PREFIX/include/Eigen/ &&\
-    rsync -avzh --include '*/' --include '*' --exclude '*.txt' bazel-work/external/eigen_archive/unsupported/ $PREFIX/include/unsupported/ &&\
-    rsync -avzh --include '*/' --include '*.h' --include '*.inc' --exclude '*' bazel-work/external/com_google_protobuf/src/google/ $PREFIX/include/google/ &&\
-    rsync -avzh --include '*/' --include '*.h' --include '*.inc' --exclude '*' bazel-work/external/com_google_absl/absl/ $PREFIX/include/absl/ 
+    rsync -avzh --include '*/' --include '*' --exclude '*.txt' bazel-tensorflow_src/external/eigen_archive/Eigen/ $PREFIX/include/Eigen/ &&\
+    rsync -avzh --include '*/' --include '*' --exclude '*.txt' bazel-tensorflow_src/external/eigen_archive/unsupported/ $PREFIX/include/unsupported/ &&\
+    rsync -avzh --include '*/' --include '*.h' --include '*.inc' --exclude '*' bazel-tensorflow_src/external/com_google_protobuf/src/google/ $PREFIX/include/google/ &&\
+    rsync -avzh --include '*/' --include '*.h' --include '*.inc' --exclude '*' bazel-tensorflow_src/external/com_google_absl/absl/ $PREFIX/include/absl/ 
 
 FROM scratch AS build_image3
-COPY --from=built_image2 / /
+COPY --from=built_image2 $PREFIX /
 
-ENV DPMD_DIR=/opt/deepmd-kit  
-RUN mkdir /tensorflow_binaries &&\
-    cd /${TF_DIR} 
+ENTRYPOINT ["tini", "--"]
+CMD [ "/bin/bash" ]
+
+# ENV DPMD_DIR=/opt/deepmd-kit  
+# RUN mkdir /tensorflow_binaries &&\
+#     cd /${TF_DIR} 
 
 
-FROM scratch AS binaries
-COPY --from=build_image2 / /
+# FROM scratch AS binaries
+# COPY --from=build_image2 / /
 
 
