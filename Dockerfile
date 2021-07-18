@@ -67,7 +67,7 @@ RUN mkdir -p ${TF_BINAR}/lib/&&\
     --cxxopt=-fmessage-length=0 \
     --linkopt=-zrelro \
     --linkopt=-znow \
-    --linkopt="-L${PREFIX}/lib" \
+    --linkopt="-L${TF_BINAR}/lib" \
     --verbose_failures \
     --config=opt \
     --config=cuda \
@@ -76,24 +76,24 @@ RUN mkdir -p ${TF_BINAR}/lib/&&\
     --jobs=$(nproc)\
     //tensorflow:libtensorflow_cc.so &&\
 
-    mkdir -p $PREFIX/lib  &&\
-    cp -d bazel-bin/tensorflow/libtensorflow_cc.so* $PREFIX/lib/ &&\
-    cp -d bazel-bin/tensorflow/libtensorflow_framework.so* $PREFIX/lib/ &&\
-    cp -d $PREFIX/lib/libtensorflow_framework.so.2 $PREFIX/lib/libtensorflow_framework.so &&\
-    mkdir -p $PREFIX/include &&\
-    mkdir -p $PREFIX/include/tensorflow &&\
+    mkdir -p $TF_BINAR/lib  &&\
+    cp -d bazel-bin/tensorflow/libtensorflow_cc.so* $TF_BINAR/lib/ &&\
+    cp -d bazel-bin/tensorflow/libtensorflow_framework.so* $TF_BINAR/lib/ &&\
+    cp -d $TF_BINAR/lib/libtensorflow_framework.so.2 $TF_BINAR/lib/libtensorflow_framework.so &&\
+    mkdir -p $TF_BINAR/include &&\
+    mkdir -p $TF_BINAR/include/tensorflow &&\
     # copy headers
-    rsync -avzh --exclude '_virtual_includes/' --include '*/' --include '*.h' --include '*.inc' --exclude '*' bazel-bin/ $PREFIX/include/ &&\
-    rsync -avzh --include '*/' --include '*.h' --include '*.inc' --exclude '*' tensorflow/cc $PREFIX/include/tensorflow/ &&\
-    rsync -avzh --include '*/' --include '*.h' --include '*.inc' --exclude '*' tensorflow/core $PREFIX/include/tensorflow/ &&\
-    rsync -avzh --include '*/' --include '*' --exclude '*.cc' third_party/ $PREFIX/include/third_party/ &&\
-    rsync -avzh --include '*/' --include '*' --exclude '*.txt' bazel-tensorflow_src/external/eigen_archive/Eigen/ $PREFIX/include/Eigen/ &&\
-    rsync -avzh --include '*/' --include '*' --exclude '*.txt' bazel-tensorflow_src/external/eigen_archive/unsupported/ $PREFIX/include/unsupported/ &&\
-    rsync -avzh --include '*/' --include '*.h' --include '*.inc' --exclude '*' bazel-tensorflow_src/external/com_google_protobuf/src/google/ $PREFIX/include/google/ &&\
-    rsync -avzh --include '*/' --include '*.h' --include '*.inc' --exclude '*' bazel-tensorflow_src/external/com_google_absl/absl/ $PREFIX/include/absl/ 
+    rsync -avzh --exclude '_virtual_includes/' --include '*/' --include '*.h' --include '*.inc' --exclude '*' bazel-bin/ $TF_BINAR/include/ &&\
+    rsync -avzh --include '*/' --include '*.h' --include '*.inc' --exclude '*' tensorflow/cc $TF_BINAR/include/tensorflow/ &&\
+    rsync -avzh --include '*/' --include '*.h' --include '*.inc' --exclude '*' tensorflow/core $TF_BINAR/include/tensorflow/ &&\
+    rsync -avzh --include '*/' --include '*' --exclude '*.cc' third_party/ $TF_BINAR/include/third_party/ &&\
+    rsync -avzh --include '*/' --include '*' --exclude '*.txt' bazel-tensorflow_src/external/eigen_archive/Eigen/ $TF_BINAR/include/Eigen/ &&\
+    rsync -avzh --include '*/' --include '*' --exclude '*.txt' bazel-tensorflow_src/external/eigen_archive/unsupported/ $TF_BINAR/include/unsupported/ &&\
+    rsync -avzh --include '*/' --include '*.h' --include '*.inc' --exclude '*' bazel-tensorflow_src/external/com_google_protobuf/src/google/ $TF_BINAR/include/google/ &&\
+    rsync -avzh --include '*/' --include '*.h' --include '*.inc' --exclude '*' bazel-tensorflow_src/external/com_google_absl/absl/ $TF_BINAR/include/absl/ 
 
 FROM scratch AS build_image3
-COPY --from=built_image2 $PREFIX /
+COPY --from=built_image2 $TF_BINAR /
 
 ENTRYPOINT ["tini", "--"]
 CMD [ "/bin/bash" ]
