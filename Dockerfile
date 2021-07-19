@@ -95,7 +95,6 @@ RUN mkdir -p ${TF_BINAR}/lib/&&\
 FROM scratch AS build_image3
 COPY --from=build_image2 $TF_BINAR /
 
-ENTRYPOINT ["tini", "--"]
 CMD [ "/bin/bash" ]
 
 # ENV DPMD_DIR=/opt/deepmd-kit  
