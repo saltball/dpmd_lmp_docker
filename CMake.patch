@@ -1,0 +1,31 @@
+*** CMakeLists.txt	Mon Jul 19 22:48:18 2021
+--- CMakeLists.txt.origin	Tue Jul 20 03:34:32 2021
+***************
+*** 112,125 ****
+    USER-MANIFOLD USER-MEAMC USER-MESONT USER-MGPT USER-MISC USER-MOFFF USER-MOLFILE
+    USER-NETCDF USER-PHONON USER-PLUMED USER-PTM USER-QTB USER-REACTION
+    USER-REAXC USER-SCAFACOS USER-SDPD USER-SMD USER-SMTBQ USER-SPH USER-TALLY
+!   USER-UEF USER-VTK USER-QUIP USER-QMMM USER-YAFF USER-ADIOS USER-DEEPMD)
+  set(SUFFIX_PACKAGES CORESHELL USER-OMP KOKKOS OPT USER-INTEL GPU)
+  foreach(PKG ${STANDARD_PACKAGES} ${SUFFIX_PACKAGES})
+    option(PKG_${PKG} "Build ${PKG} Package" OFF)
+  endforeach()
+! if(PKG_USER-DEEPMD)
+!   include(Packages/USER-DEEPMD)
+! endif()
+  ######################################################
+  # packages with special compiler needs or external libs
+  ######################################################
+--- 112,123 ----
+    USER-MANIFOLD USER-MEAMC USER-MESONT USER-MGPT USER-MISC USER-MOFFF USER-MOLFILE
+    USER-NETCDF USER-PHONON USER-PLUMED USER-PTM USER-QTB USER-REACTION
+    USER-REAXC USER-SCAFACOS USER-SDPD USER-SMD USER-SMTBQ USER-SPH USER-TALLY
+!   USER-UEF USER-VTK USER-QUIP USER-QMMM USER-YAFF USER-ADIOS)
+  set(SUFFIX_PACKAGES CORESHELL USER-OMP KOKKOS OPT USER-INTEL GPU)
+  foreach(PKG ${STANDARD_PACKAGES} ${SUFFIX_PACKAGES})
+    option(PKG_${PKG} "Build ${PKG} Package" OFF)
+  endforeach()
+! 
+  ######################################################
+  # packages with special compiler needs or external libs
+  ######################################################

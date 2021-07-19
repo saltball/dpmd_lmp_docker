@@ -1,12 +1,15 @@
 ARG GPU=gpu
+ARG TF_SRC=/tensorflow_src
+ARG TF_BINAR=/tensorflow_binaries
+ARG PROTOBUF_VERSION=3.17.3
+ARG LAMMPS_VERSION=stable_29Oct2020
+ARG DPMD_DIR=/dpmd
 FROM tensorflow/tensorflow:latest-devel${GPU:+-$GPU} AS build_image
 
 LABEL maintainer="Saltball <yanbohan98@gmail.com>"
 
 WORKDIR /
 # Get and compile protobuf
-ARG PROTOBUF_VERSION=3.17.3
-# NEEDED docker build --build-arg TOMCAT_VERSION
 RUN  wget https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOBUF_VERSION}/protobuf-cpp-${PROTOBUF_VERSION}.zip &&\
     unzip -q protobuf-cpp-${PROTOBUF_VERSION} &&\
     cd protobuf-${PROTOBUF_VERSION} &&\
@@ -16,8 +19,6 @@ FROM scratch AS build_image2
 COPY --from=build_image / /
 
 # compile tensorflow
-ARG TF_SRC=/tensorflow_src
-ARG TF_BINAR=/tensorflow_binaries
 RUN mkdir -p ${TF_BINAR}/lib/&&\
     mkdir -p ${TF_BINAR}/include/ &&\
     cd ${TF_SRC}  &&\
@@ -93,16 +94,68 @@ RUN mkdir -p ${TF_BINAR}/lib/&&\
     rsync -avzh --include '*/' --include '*.h' --include '*.inc' --exclude '*' bazel-tensorflow_src/external/com_google_absl/absl/ $TF_BINAR/include/absl/ 
 
 FROM scratch AS build_image3
-COPY --from=build_image2 $TF_BINAR /
+# copy the build artifacts to the lmp buildtime image
+COPY --from=build_image2 ${TF_BINAR} ${TF_BINAR}
+# initialize the build environment
+RUN apt update &&\
+    apt install git cmake wget mpich python3-dev pkg-config &&\
+    git clone https://github.com/deepmodeling/deepmd-kit/ -b devel &&\
+    # set varibles
+    export tensorflow_root=${TF_BINAR} &&\
+    export deepmd_root_to_install=${DPMD_DIR} &&\
+    export deepmd_source_dir=/deepmd-kit &&\
+
+    mkdir -p ${deepmd_root_to_install} &&\
+
+    # build deepmd
+    cd ${deepmd_source_dir}/source &&\
+    mkdir build &&\
+    cd build &&\
+    cmake -DTENSORFLOW_ROOT=$tensorflow_root -DCMAKE_INSTALL_PREFIX=$deepmd_root_to_install -DUSE_CUDA_TOOLKIT=True .. &&\
+    make -j$(nproc) &&\
+    make install &&\
+
+    # build deepmd_lammps
+    cd ${deepmd_source_dir}/source/build &&\
+    make lammps &&\
+
+    # build lmp with dpmd
+    export lammps_binary_root=/lammps_bin &&\
+    mkdir -p ${lammps_binary_root} &&\
+    cd ${lammps_binary_root} &&\
+    wget https://github.com/deepmodeling/lammps/archive/refs/tags/${LAMMPS_VERSION}.tar.gz &&\
+    tar -xzf ${LAMMPS_VERSION}.tar.gz &&\
+
+    cd ${lammps_binary_root}/lammps-${LAMMPS_VERSION}/src &&\
+    cp -r $deepmd_source_dir/source/build/USER-DEEPMD . &&\
+
+    # compile with cmake
+    cd ${lammps_binary_root}/lammps-${LAMMPS_VERSION}/cmake &&\
+    git clone https://github.com/saltball/dpmd_lmp_docker &&\
+    cp dpmd_lmp_docker/USER-DEEPMD.cmake ./Modules/Packages/ &&\
+    cp dpmd_lmp_docker/CMake.patch . &&\
+    patch -p1 < CMake.patch &&\
+    rm dpmd_lmp_docker/ -r &&\
+
+    # compile lammps
+    export dpmd_lmp_install_root=/dpmd_lmp_install &&\
+    cd ${lammps_binary_root}/lammps-${LAMMPS_VERSION} &&\
+    mkdir build &&\
+    cd build &&\
+    cmake -C ../cmake/presets/most.cmake ../cmake -DBUILD_MPI=on -DPKG_USER-DEEPMD=on -DDEEPMD_ROOT=$deepmd_root_to_install -DTENSORFLOW_INCLUDE_DIRS="$tensorflow_root/include" -DTENSORFLOW_LIBRARY_PATH="$tensorflow_root/lib" -DCMAKE_INSTALL_PREFIX=$dpmd_lmp_install_root &&\
+
+    make -j$(nproc) &&\
+    make install
+
+FROM scratch AS build_image4
+# copy the build artifacts to the lmp runtime image
+COPY --from=build_image3 ${DPMD_DIR} ${DPMD_DIR}
+COPY --from=build_image3 ${TF_BINAR} ${TF_BINAR}
+COPY --from=build_image3 /dpmd_lmp_install /dpmd_lmp_install
+# set the environment variable
+RUN export LD_LIBRARY_PATH=${TF_BINAR}/lib:${LD_LIBRARY_PATH} &&\
+    export LD_LIBRARY_PATH=${DPMD_DIR}/lib64:${LD_LIBRARY_PATH} &&\
+    export PATH=${DPMD_DIR}/bin:${PATH} 
 
 CMD [ "/bin/bash" ]
-
-# ENV DPMD_DIR=/opt/deepmd-kit  
-# RUN mkdir /tensorflow_binaries &&\
-#     cd /${TF_DIR} 
-
-
-# FROM scratch AS binaries
-# COPY --from=build_image2 / /
-
 

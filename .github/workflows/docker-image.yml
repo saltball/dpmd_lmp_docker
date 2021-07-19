@@ -17,4 +17,4 @@ jobs:
         username: saltball
         password: "${{ secrets.GITHUB_TOKEN }}"  # you don't need to manually set this secret. GitHub does it on your behalf
         registry: docker.pkg.github.com
-        image_name: docker_with_libtfcc
+        image_name: dpmd_lmp_docker
