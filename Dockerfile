@@ -1,12 +1,14 @@
 ARG GPU=gpu
+
+FROM tensorflow/tensorflow:latest-devel${GPU:+-$GPU} AS build_image
+
+LABEL maintainer="Saltball <yanbohan98@gmail.com>"
+
 ARG TF_SRC=/tensorflow_src
 ARG TF_BINAR=/tensorflow_binaries
 ARG PROTOBUF_VERSION=3.17.3
 ARG LAMMPS_VERSION=stable_29Oct2020
 ARG DPMD_DIR=/dpmd
-FROM tensorflow/tensorflow:latest-devel${GPU:+-$GPU} AS build_image
-
-LABEL maintainer="Saltball <yanbohan98@gmail.com>"
 
 WORKDIR /
 # Get and compile protobuf
@@ -17,6 +19,12 @@ RUN  wget https://github.com/protocolbuffers/protobuf/releases/download/v${PROTO
 
 FROM scratch AS build_image2
 COPY --from=build_image / /
+
+ARG TF_SRC=/tensorflow_src
+ARG TF_BINAR=/tensorflow_binaries
+ARG PROTOBUF_VERSION=3.17.3
+ARG LAMMPS_VERSION=stable_29Oct2020
+ARG DPMD_DIR=/dpmd
 
 # compile tensorflow
 RUN mkdir -p ${TF_BINAR}/lib/&&\
@@ -95,6 +103,12 @@ RUN mkdir -p ${TF_BINAR}/lib/&&\
 
 FROM scratch AS build_image3
 # copy the build artifacts to the lmp buildtime image
+ARG TF_SRC=/tensorflow_src
+ARG TF_BINAR=/tensorflow_binaries
+ARG PROTOBUF_VERSION=3.17.3
+ARG LAMMPS_VERSION=stable_29Oct2020
+ARG DPMD_DIR=/dpmd
+
 COPY --from=build_image2 ${TF_BINAR} ${TF_BINAR}
 # initialize the build environment
 RUN apt update &&\
@@ -148,6 +162,11 @@ RUN apt update &&\
     make install
 
 FROM scratch AS build_image4
+ARG TF_SRC=/tensorflow_src
+ARG TF_BINAR=/tensorflow_binaries
+ARG PROTOBUF_VERSION=3.17.3
+ARG LAMMPS_VERSION=stable_29Oct2020
+ARG DPMD_DIR=/dpmd
 # copy the build artifacts to the lmp runtime image
 COPY --from=build_image3 ${DPMD_DIR} ${DPMD_DIR}
 COPY --from=build_image3 ${TF_BINAR} ${TF_BINAR}
